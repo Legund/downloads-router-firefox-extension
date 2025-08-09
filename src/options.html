@@ -170,6 +170,17 @@
 					<p>Specify the order in which you would like the tables taversed.<br><em>Default is filename, referrer, mime.</em></p>
 					<input type="text" id="rule_order" name="rule_order" value="" placeholder="filename, referrer, mime">
 
+                    <h2>Monitored Source Folders</h2>
+                    <p class="note">The extension will only route downloads that are saved into one of these folders. Please provide the full, absolute path to the folder (e.g., C:\Users\YourName\Downloads).</p>
+                    <table id="monitored_folders_table">
+                        <thead>
+                            <tr><th>Source Folder Path</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="2"><button id="add_monitored_folder_route" class="btn"><strong>+</strong> Add new monitored folder</button></td></tr>
+                        </tbody>
+                    </table>
+
 					<h2>Filetype &#8680; folder mapping</h2>
 					<table id="mime_mapping_table">
 						<thead>
@@ -337,7 +348,7 @@
 
 					<h5>Domain-based routing</h5>
 					<ul>
-						<li>Some websites serve content through other domains than what is visible in the Omnibar. To verify if this might be your issue, right-click the item and "inspect" it &ndash; look for other domains in the highlighted area.</li>
+						<li>Some websites serve content through other domains than what is visible in the Omnibar. To verify if this is your issue, right-click the item and "inspect" it &ndash; look for other domains in the highlighted area.</li>
 					</ul>
 
 					<h5>MIME-based routing</h5>

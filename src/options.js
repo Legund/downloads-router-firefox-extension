@@ -1,4 +1,17 @@
 function save_options() {
+	// Save Monitored Folders
+	const monitoredFoldersTable = document.getElementById('monitored_folders_table').getElementsByTagName('tbody')[0];
+	const monitoredFolders = [];
+	for (let i = 0; i < monitoredFoldersTable.rows.length - 1; i++) {
+		const input = monitoredFoldersTable.rows[i].querySelector('input[type=text]');
+		if (input.value) {
+			monitoredFolders.push(input.value);
+		}
+	}
+	localStorage.setItem('dr_monitored_folders', JSON.stringify(monitoredFolders));
+
+
+	// Save standard routing maps
 	var maps = [{}, {}, {}];
 	var tables = [
 		document.getElementById('mime_mapping_table').getElementsByTagName('tbody')[0],
@@ -8,10 +21,11 @@ function save_options() {
 
 	for(var idx in tables) {
 		for(var i = 0; i < tables[idx].rows.length - 1; i++) {
-			fields = tables[idx].rows[i].getElementsByTagName('input');
-			if(fields[0].value != '' && fields[1].value != '') {
-				target_directory = check_trailing(fields[1].value);
-				maps[idx][fields[0].value] = target_directory;
+			const keyInput = tables[idx].rows[i].getElementsByTagName('input')[0];
+            const pathInput = tables[idx].rows[i].getElementsByTagName('input')[1];
+
+			if(keyInput.value && pathInput.value) {
+				maps[idx][keyInput.value] = check_trailing(pathInput.value);
 			}
 		}
 	}
@@ -32,17 +46,15 @@ function save_options() {
 			return false;
 		}
 
-		return true; // Again, abusing every()
+		return true;
 	}); 
 
 	localStorage.setItem('dr_order', JSON.stringify(order));
 	localStorage.setItem('dr_global_ref_folders',
 		JSON.parse(document.querySelector('#global_ref_folders').checked));
 
-	// Flash a status message
 	var status = document.getElementById('status');
 	status.innerHTML = '<span class="green">&#10004;</span> Settings saved!';
-	//status.innerHTML = '<span class="green">&#10004;</span>' + chrome.i18n.getMessage('msg_saved');
 	status.style.display = 'block';
 	setTimeout(function() {
 		status.innerHTML = '';
@@ -51,69 +63,44 @@ function save_options() {
 }
 
 function restore_options() {
+	// Restore Monitored Folders
+	const monitoredFolders = JSON.parse(localStorage.getItem('dr_monitored_folders')) || [];
+	for (const folder of monitoredFolders) {
+		add_monitored_folder_row(folder);
+	}
+
+	// Restore standard routing maps
 	var tables = [
 		document.getElementById('mime_mapping_table').getElementsByTagName('tbody')[0],
 		document.getElementById('referrer_mapping_table').getElementsByTagName('tbody')[0],
 		document.getElementById('filename_mapping_table').getElementsByTagName('tbody')[0]
 	];
 
-	var maps = [
-		'dr_mime_map',
-		'dr_referrer_map',
-		'dr_filename_map'
-	];
-
+	var maps = ['dr_mime_map', 'dr_referrer_map', 'dr_filename_map'];
 	var map_defaults = [
-		{ 'image/jpeg': 'images/', 'application/x-bittorrent': 'torrents/' },
+		{ 'image/jpeg': 'images/' },
 		{},
 		{}
 	];
 
 	for(var idx = 0; idx < maps.length; ++idx) {
-		// Restore or create mapping table
 		var map = localStorage.getItem(maps[idx]);
-		if(map) {
-			map = JSON.parse(map);
-		} else {
-			map = map_defaults[idx];
-			localStorage.setItem(maps[idx], JSON.stringify(map));
-		}
+		map = map ? JSON.parse(map) : map_defaults[idx];
+        localStorage.setItem(maps[idx], JSON.stringify(map));
 
-		// Create HTML table elements for corresponding map
 		for(var key in map) {
-			var input         = document.createElement('input');
-			input.type        = 'text';
-			input.value       = key;
-			input.placeholder = key;
-
-			var path          = document.createElement('input'); // type = 'file' error explanation here
-			path.type         = 'text';
-			path.value        = map[key];
-			path.placeholder  = map[key];
-
-			add_table_row(tables[idx], input, path);
+			add_routing_rule_row(tables[idx], key, map[key]);
 		}
 	}
 
 	var order = localStorage.getItem('dr_order');
-	if(order) {
-		order = JSON.parse(order);
-	} else {
-		order = ['filename', 'referrer', 'mime'];
-		localStorage.setItem('dr_order', JSON.stringify(order));
-	}
-
+	order = order ? JSON.parse(order) : ['filename', 'referrer', 'mime'];
+	localStorage.setItem('dr_order', JSON.stringify(order));
 	document.getElementById('rule_order').value = order;
 
 
-	var global_ref_folders = localStorage.getItem('dr_global_ref_folders');
-	if(global_ref_folders) {
-		global_ref_folders = JSON.parse(global_ref_folders);
-	} else {
-		global_ref_folders = false;
-		localStorage.setItem('dr_global_ref_folders', JSON.stringify(false));
-	}
-
+	var global_ref_folders = JSON.parse(localStorage.getItem('dr_global_ref_folders')) || false;
+    localStorage.setItem('dr_global_ref_folders', JSON.stringify(global_ref_folders));
 	document.getElementById('global_ref_folders').checked = global_ref_folders;
 }
 
@@ -121,82 +108,79 @@ function check_trailing(path) {
 	if(path.slice(-1) == '/' || path.slice(-1) == '\\') {
 		return path;
 	}
-
-	if(navigator.platform.indexOf('Win') != -1) {
-		if(path.indexOf('\\') != -1) { // Could be an escape, but it's a half-decent guess
-			return path + '\\';
-		}
-	}
-
-	// Windows with no \ delimiter, OSX, Linux, other thing; let's just attempt with a forward slash for now
-	return path + '/'
+	// Use forward slash as a universal separator for internal logic
+	return path + '/';
 }
 
-function add_table_row(table, element1, element2) {
-	var newRow    = table.insertRow(table.rows.length - 1);
-	var srcCell   = newRow.insertCell(0);
-	var spaceCell = newRow.insertCell(1);
-	var destCell  = newRow.insertCell(2);
-	var delCell   = newRow.insertCell(3);
+// Generic function to add a routing rule row
+function add_routing_rule_row(table, key = '', path = '') {
+    const newRow = table.insertRow(table.rows.length - 1);
+    const keyCell = newRow.insertCell(0);
+    const spaceCell = newRow.insertCell(1);
+    const destCell = newRow.insertCell(2);
+    const delCell = newRow.insertCell(3);
 
-	srcCell.appendChild(element1);
-	destCell.appendChild(element2);
+    const keyInput = document.createElement('input');
+    keyInput.type = 'text';
+    keyInput.value = key;
+    keyCell.appendChild(keyInput);
 
-	var delInput       = document.createElement('button');
-	delInput.className = 'btn delete';
-	delInput.innerHTML = '&#215;';
-	delInput.onclick   = function() {
-		var current = window.event.srcElement;
-		while((current = current.parentElement) && current.tagName != 'TR');
-		current.parentElement.removeChild(current);
-	}
+    const pathInput = document.createElement('input');
+    pathInput.type = 'text';
+    pathInput.value = path;
+    destCell.appendChild(pathInput);
 
-	delCell.appendChild(delInput);
-	spaceCell.appendChild(document.createTextNode('➜'));
+    const delInput = document.createElement('button');
+    delInput.className = 'btn delete';
+    delInput.innerHTML = '&#215;';
+    delInput.onclick = function() {
+        this.closest('tr').remove();
+    };
+    delCell.appendChild(delInput);
 
-	newRow.appendChild(srcCell);
-	newRow.appendChild(spaceCell);
-	newRow.appendChild(destCell);
-	newRow.appendChild(delCell);
+    spaceCell.appendChild(document.createTextNode('➜'));
 }
 
-/* The following two functions are invoked from the options page,
- * for adding empty rows to the corresponding tables. */
+
+function add_monitored_folder_row(value = '') {
+    const table = document.getElementById('monitored_folders_table').getElementsByTagName('tbody')[0];
+    const newRow = table.insertRow(table.rows.length - 1);
+    const pathCell = newRow.insertCell(0);
+    const delCell = newRow.insertCell(1);
+    
+    const pathInput = document.createElement('input');
+    pathInput.type = 'text';
+    pathInput.placeholder = 'e.g., C:\\Users\\YourName\\Downloads';
+    pathInput.value = value;
+    pathCell.appendChild(pathInput);
+
+    const delInput = document.createElement('button');
+    delInput.className = 'btn delete';
+    delInput.innerHTML = '&#215;';
+    delInput.onclick = function() {
+        this.closest('tr').remove();
+    };
+    delCell.appendChild(delInput);
+}
+
+
+function add_monitored_folder_route() {
+    add_monitored_folder_row();
+}
 
 function add_mime_route() {
-	var table             = document.getElementById('mime_mapping_table').getElementsByTagName('tbody')[0];
-	var mimeInput         = document.createElement('input');
-	mimeInput.type        = 'text';
-	mimeInput.placeholder = 'E.g. image/jpeg';
-	var pathInput         = document.createElement('input');
-	pathInput.type        = 'text';
-	pathInput.placeholder = 'some/folder/';
-
-	add_table_row(table, mimeInput, pathInput);
+	const table = document.getElementById('mime_mapping_table').getElementsByTagName('tbody')[0];
+	add_routing_rule_row(table);
 }
 
 function add_referrer_route() {
-	var table             = document.getElementById('referrer_mapping_table').getElementsByTagName('tbody')[0];
-	var refInput          = document.createElement('input');
-	refInput.type         = 'text';
-	refInput.placeholder  = 'E.g. 9gag.com (no http://)';
-	var pathInput         = document.createElement('input');
-	pathInput.type        = 'text';
-	pathInput.placeholder = 'some/folder/';
-
-	add_table_row(table, refInput, pathInput);
+	const table = document.getElementById('referrer_mapping_table').getElementsByTagName('tbody')[0];
+	add_routing_rule_row(table);
 }
 
 function add_filename_route() {
-	var table             = document.getElementById('filename_mapping_table').getElementsByTagName('tbody')[0];
-	var refInput          = document.createElement('input');
-	refInput.type         = 'text';
-	refInput.placeholder  = 'E.g. epub|ebook';
-	var pathInput         = document.createElement('input');
-	pathInput.type        = 'text';
-	pathInput.placeholder = 'some/folder/';
-
-	add_table_row(table, refInput, pathInput);
+	const table = document.getElementById('filename_mapping_table').getElementsByTagName('tbody')[0];
+	add_routing_rule_row(table);
 }
 
 function options_setup() {
@@ -205,10 +189,8 @@ function options_setup() {
 	var tabs   = cont.querySelectorAll('.tab');
 	var active = 'routing';
 
-	// Handle new installations by showing the usage instructions and a quick message
 	if(!localStorage.getItem('dr_mime_map')) {
 		active = 'usage';
-
 		var status = document.getElementById('status');
 		status.innerHTML = 'Thank you for installing Downloads Router!<br>Please read the instructions below, then head over to the routing rules to configure the extension.';
 		status.style.display = 'block';
@@ -224,7 +206,6 @@ function options_setup() {
 		if(tabs[i].id != active) {
 			tabs[i].style.display = 'none';
 		}
-
 		navs[i].onclick = handle_click;
 		if(navs[i].dataset.tab == active) {
 			navs[i].setAttribute('class', 'active');
@@ -238,22 +219,18 @@ function handle_click() {
 	var current  = this.parentNode.dataset.current;
 	var selected = this.dataset.tab;
 
-	if(current == selected) {
-		return;
-	}
+	if(current == selected) return;
 
 	document.getElementById(current).style.display  = 'none';
 	document.getElementById(selected).style.display = 'block';
 	document.getElementById('nav_' + current).removeAttribute('class', 'active');
-
 	this.setAttribute('class', 'active');
 	this.parentNode.dataset.current = selected;
 }
 
-/* Event listeners */
-
 document.addEventListener('DOMContentLoaded', options_setup);
 document.querySelector('#save').addEventListener('click', save_options);
+document.querySelector('#add_monitored_folder_route').addEventListener('click', add_monitored_folder_route);
 document.querySelector('#add_mime_route').addEventListener('click', add_mime_route);
 document.querySelector('#add_referrer_route').addEventListener('click', add_referrer_route);
 document.querySelector('#add_filename_route').addEventListener('click', add_filename_route);

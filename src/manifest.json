@@ -6,17 +6,22 @@
 	"description": "__MSG_appDesc__",
 	"default_locale": "en",
 
-	"version": "0.8.1",
-	"options_page": "options.html",
+	"version": "0.8.2",
+	"options_ui": {
+		"page": "options.html",
+		"open_in_tab": true
+	},
 	"homepage_url": "https://bitbucket.org/lfk/downloads-router-chrome-extension",
 
 	"permissions": [
-		"downloads"
+		"downloads",
+		"webRequest",
+		"webRequestBlocking",
+		"<all_urls>"
 	],
 
 	"background": {
-		"scripts": ["manager.js"],
-		"persistent": false
+		"scripts": ["manager.js"]
 	},
 
 	"icons": {
@@ -24,5 +29,11 @@
 		"32":  "data/icon32.png",
 		"48":  "data/icon48.png",
 		"128": "data/icon128.png"
+	},
+
+	"browser_specific_settings": {
+		"gecko": {
+			"id": "downloads-router@example.com"
+		}
 	}
 }
