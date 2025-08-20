@@ -24,6 +24,7 @@ function save_options() {
 			const keyInput = tables[idx].rows[i].getElementsByTagName('input')[0];
             const pathInput = tables[idx].rows[i].getElementsByTagName('input')[1];
 
+			// Only save the rule if both a key and a path are provided.
 			if(keyInput.value && pathInput.value) {
 				maps[idx][keyInput.value] = check_trailing(pathInput.value);
 			}
@@ -78,7 +79,7 @@ function restore_options() {
 
 	var maps = ['dr_mime_map', 'dr_referrer_map', 'dr_filename_map'];
 	var map_defaults = [
-		{ 'image/jpeg': 'images/' },
+		{ 'image/jpeg': 'images/' , 'application/x-bittorrent': 'torrents/','video/mp4': 'videos/'},
 		{},
 		{}
 	];
@@ -105,11 +106,18 @@ function restore_options() {
 }
 
 function check_trailing(path) {
-	if(path.slice(-1) == '/' || path.slice(-1) == '\\') {
-		return path;
+	if (!path) {
+		return "";
 	}
-	// Use forward slash as a universal separator for internal logic
-	return path + '/';
+	// Standardize to './' and don't add a slash for "keep original folder" rule.
+	if (path.trim() === './' || path.trim() === '.\\') {
+		return './';
+	}
+	// If it's any other path, ensure it ends with a forward slash.
+	if (path.slice(-1) === '/' || path.slice(-1) === '\\') {
+		return path.replace(/\\/g, '/');
+	}
+	return path.replace(/\\/g, '/') + '/';
 }
 
 // Generic function to add a routing rule row

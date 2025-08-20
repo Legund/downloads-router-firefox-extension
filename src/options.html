@@ -164,14 +164,16 @@
 					<h1>Routing rules</h1>
 
 					<p>Please provide destination folders delimited by forward slash (/).<br>
-					Destinations must be located within the base downloads folder; use symbolic links to circumvent this restriction (see usage instructions).</p>
+					Destinations must be located within the base downloads folder; use symbolic links to circumvent this restriction (see usage instructions).<br>
+					./ will keep the file in the base downloads folder.</p>
 
 					<h2>Rule execution hierarchy</h2>
 					<p>Specify the order in which you would like the tables taversed.<br><em>Default is filename, referrer, mime.</em></p>
 					<input type="text" id="rule_order" name="rule_order" value="" placeholder="filename, referrer, mime">
 
                     <h2>Monitored Source Folders</h2>
-                    <p class="note">The extension will only route downloads that are saved into one of these folders. Please provide the full, absolute path to the folder (e.g., C:\Users\YourName\Downloads).</p>
+                    <p class="note">The extension will only route downloads that are saved into one of these folders. Please provide the full, absolute path to the folder (e.g., C:\Users\YourName\Downloads).<br>
+					Destination folders are still relative to the browser's base downloads folder.</p>
                     <table id="monitored_folders_table">
                         <thead>
                             <tr><th>Source Folder Path</th><th></th></tr>
