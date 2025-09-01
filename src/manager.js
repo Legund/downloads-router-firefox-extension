@@ -228,15 +228,51 @@ chrome.webRequest.onHeadersReceived.addListener(
         order.some(rule => rulesets[rule](simulatedDownloadItem, suggest));
 
         if (suggestion.filename && !suggestion.handled) {
-            console.debug(`  - Rerouting via header to: "${suggestion.filename}"`);
-            header.value = `attachment; filename="${suggestion.filename.replace(/"/g, '\\"')}"`;
-            rerouting.add(details.url); // Mark this URL as handled.
-        } else if (suggestion.handled) {
-             console.debug("  - Rule with './' matched. Download will proceed to original location.");
-             rerouting.add(details.url); // Mark as handled to prevent onCreated from re-processing.
-        } else {
-            console.debug("  - No rules matched. Proceeding with original download.");
-        }
+			console.debug(`  - Rerouting via fallback to: "${suggestion.filename}"`);
+			rerouting.add(downloadItem.url);
+			chrome.downloads.cancel(downloadItem.id);
+			chrome.downloads.erase({ id: downloadItem.id });
+
+
+			let headerUrl;
+
+			if (downloadItem.referrer) {
+				headerUrl = downloadItem.referrer;
+				console.debug(`  - Using browser-provided referrer: ${headerUrl}`);
+			} else if (downloadItem.url) {
+				try {
+					const urlObject = new URL(downloadItem.url);
+					headerUrl = urlObject.origin; // e.g., "https://gemini.google.com"
+					console.debug(`  - No referrer found. Using URL origin as fallback: ${headerUrl}`);
+				} catch (e) {
+					console.error("  - Could not parse download URL to create fallback headers.", e);
+				}
+			}
+			
+			const downloadOptions = {
+				url: downloadItem.url,
+				filename: suggestion.filename,
+				conflictAction: 'uniquify'
+			};
+
+			if (headerUrl) {
+				downloadOptions.headers = [
+					{ name: 'Referer', value: headerUrl },
+					{ name: 'Origin', value: headerUrl } 
+				];
+			}
+
+			chrome.downloads.download(downloadOptions, (downloadId) => {
+				if (chrome.runtime.lastError) {
+					console.error(`  - Fallback download failed: ${chrome.runtime.lastError.message}`);
+				} else {
+					console.debug(`  - Fallback download initiated with ID: ${downloadId}`);
+				}
+				setTimeout(() => rerouting.delete(downloadItem.url), 1000);
+			});
+		} else {
+			console.debug("  - No rules matched or './' rule was used. Allowing original download.");
+		}
 
         console.groupEnd();
         return { responseHeaders: details.responseHeaders };
