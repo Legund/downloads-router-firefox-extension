@@ -152,7 +152,7 @@
 			</header>
 
 			<div id="news">
-				<p><strong>(v0.8.1) Sept. 30, 2014:</strong> Bug fixes and fallback cases for referrer- and MIME-rules.</p>
+				<p><strong>(v0.8.2) Sept. 1, 2025:</strong> Transferred codebase to work with Firefox.</p>
 			</div>
 
 			<ul id="nav">
@@ -162,6 +162,8 @@
 			<div id="content">
 				<div class="tab" id="routing">
 					<h1>Routing rules</h1>
+
+					<p class="note"><strong>Due to browser security restrictions, files downloaded from a 'blob' referrer cannot be rerouted and will be saved to your default downloads folder.</strong></p>
 
 					<p>Please provide destination folders delimited by forward slash (/).<br>
 					Destinations must be located within the base downloads folder; use symbolic links to circumvent this restriction (see usage instructions).<br>
@@ -258,8 +260,11 @@
 				<div class="tab" id="usage">
 					<h1>Usage instructions</h1>
 
+					<h2>Important Note on Firefox Implementation</h2>
+					<p>This Firefox version of Downloads Router works differently from the original Chrome extension. Due to differences in the browser extension APIs, this version reroutes downloads by first canceling the original download and then immediately starting a new one with the corrected path. This can occasionally lead to unexpected behavior with certain websites, particularly those that use temporary or one-time download links. Additionally, downloads initiated from a "blob" referrer cannot be rerouted and will be saved to your default downloads folder.</p>
+
 					<h2>Important information</h2>
-					<p>Due to security concerns (see the <a href="https://developer.chrome.com/extensions/downloads#method-download">chrome.downloads API</a>), Chrome extensions are only allowed to download files to targets <strong>within the default downloads directory</strong>.
+					<p>Due to security concerns (see the <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/downloads/download">downloads API</a>), Firefox extensions are only allowed to download files to targets <strong>within the default downloads directory</strong>.
 					You may manually circumvent this restriction by creating a "symbolic link" (<a href="http://www.howtogeek.com/howto/16226/complete-guide-to-symbolic-links-symlinks-on-windows-or-linux/">more info</a>)
 					from within the downloads directory to any other direction on your harddrive(s).</p>
 
@@ -344,8 +349,8 @@
 					<h5>Files not downloading to the given destination directory</h5>
 					<ul>
 						<li>The most common error is an invalid download path, such as a path outside of the downloads folder.<br>
-						Open the extension's background page (chrome://extensions &gt; background page) and attempt to download the file again with the "Console" tab open.
-						The following message indicates an invalid target path: <em>Error in respose handler for downloadsInternal.determineFilename: Invalid filename at &hellip;</em></li>
+						Open the extension's background page (about:debugging#/runtime/this-firefox &gt; Inspect) and attempt to download the file again with the "Console" tab open.
+						The following message indicates an invalid target path: <em>Error: Invalid filename...</em></li>
 					</ul>
 
 					<h5>Domain-based routing</h5>
@@ -365,6 +370,7 @@
 				</div>
 
 				<div class="tab" id="about">
+					<p><strong>This version of the extension is a port of the original "Downloads Router" to make it compatible with Firefox. Here is the "About" information from the original extension:</strong></p>
 					<h1>About this extension</h1>
 					<p>This extension was hacked together overnight by yours truly, during the wee hours most sane people spend sleeping. As such, there are certainly many features I've yet to think about, not to mention bugs waiting to be discovered.</p>
 					<p>I'd be most grateful if you'd inform me of any and all such issues via the project source code repository &mdash; and if you feel like adding some code yourself, that'd be beyond awesome!</p>

@@ -191,6 +191,13 @@ const rerouting = new Set();
 // METHOD 1: Intercept headers to reroute downloads before they start.
 chrome.webRequest.onHeadersReceived.addListener(
     function(details) {
+        // --- FIX START ---
+        // Ignore blob URLs to prevent "Access denied" errors.
+        if (details.url.startsWith('blob:')) {
+            return { responseHeaders: details.responseHeaders };
+        }
+        // --- FIX END ---
+
         // Get the latest rule order every time.
         const order = JSON.parse(localStorage.getItem('dr_order')) || ['filename', 'referrer', 'mime'];
 
@@ -283,6 +290,11 @@ chrome.webRequest.onHeadersReceived.addListener(
 
 // METHOD 2: Fallback for downloads not caught by the header listener.
 chrome.downloads.onCreated.addListener(function(downloadItem) {
+    // Ignore blob URLs to prevent "Access denied" errors.
+    if (downloadItem.url.startsWith('blob:')) {
+        return;
+    }
+
     // If we already handled this via headers, do nothing.
     if (rerouting.has(downloadItem.url)) {
         rerouting.delete(downloadItem.url);
